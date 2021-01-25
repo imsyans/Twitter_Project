@@ -1,29 +1,31 @@
 # Install chromedriver for selenium to work
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
-from selenium.common import exceptions
 from selenium.webdriver.chrome.options import Options
-from fake_useragent import UserAgent
 import chromedriver_autoinstaller
 import pandas as pd
 from time import sleep 
 import datetime as dt
 
 # creating a chrome instance 
-def invoke_chrome_instance():
+def invoke_chrome_instance(headless = True):
     driver_path = chromedriver_autoinstaller.install()
-    driver = webdriver.Chrome(executable_path = driver_path)
-    sleep(3)
-    driver.get("https://twitter.com/login")
-    print(driver.title)
+    options = Options()
+    if headless is True:
+        options.headless = True
+        options.add_argument('--disable-gpu')
+    options.add_argument('log-level=3')
+    driver = webdriver.Chrome(executable_path = driver_path,options = options)
+    driver.set_page_load_timeout(100)
+    
     return driver
 
 
 # function to login to twitter
 def login_twitter(username,password,driver):
     try: 
-        driver.get("https://twitter.com/login")
         sleep(3)
+        driver.get("https://twitter.com/login")
         path_username = driver.find_element_by_xpath('//input[@name="session[username_or_email]"]')
         path_username.send_keys(username)
         path_password = driver.find_element_by_xpath('//input[@name="session[password]"]')
@@ -76,7 +78,7 @@ def advance_search(driver,lang=None,sent_from = None, sent_to =None, mention= No
          end_date = ""
          
     
-    query_url = "https://twitter.com/search?q="  + sent_from + sent_to + mention + lang + end_date + start_date  + '&src=typed_query&f=live'
+    query_url = "https://twitter.com/search?q="  + sent_from + sent_to + mention + end_date + start_date + lang + '&src=typed_query&f=live'
      
     driver.get(query_url)
     return
