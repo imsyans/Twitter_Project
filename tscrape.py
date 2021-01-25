@@ -12,18 +12,10 @@ import datetime as dt
 # creating a chrome instance 
 def invoke_chrome_instance():
     driver_path = chromedriver_autoinstaller.install()
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument(f'user-agent={UserAgent}')
-    chrome_options.add_argument('--no-sandbox')
-    chrome_options.add_argument("--window-size=1920,1200");
-    chrome_options.add_argument('--disable-dev-shm-usage')
-    chrome_options.add_argument('--disable-gpu')
-    driver = webdriver.Chrome(executable_path = driver_path,options=chrome_options)
+    driver = webdriver.Chrome(executable_path = driver_path)
     sleep(3)
     driver.get("https://twitter.com/login")
     print(driver.title)
-    driver.get_screenshot_as_file("test.png")
     return driver
 
 
@@ -157,7 +149,7 @@ login_twitter("sandyma44414474","Tweet124$",chrome_tab)
 
 tweet_collector =pd.DataFrame([])
 
-advance_search(chrome_tab,mention='Hello')
+advance_search(chrome_tab,mention='biden')
 
 
 tweet_cards =scrape_tweets_on_page(chrome_tab)
