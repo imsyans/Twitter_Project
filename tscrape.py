@@ -10,6 +10,7 @@ import pandas as pd
 from time import sleep 
 import datetime as dt
 import random
+import maskpass
 
 # creating a chrome instance 
 def invoke_chrome_instance():
@@ -25,8 +26,10 @@ def invoke_chrome_instance():
 
 
 # function to login to twitter
-def login_twitter(username,password,driver):
+def login_twitter(driver):
     try: 
+        username = input("Enter twitter username: ")
+        password = maskpass.advpass("Enter your twitter password: ")
         sleep(random.uniform(1,5))
         driver.get("https://twitter.com/login")
         xpath_username = '//input[@name="session[username_or_email]"]'
@@ -201,7 +204,7 @@ def main_func(driver,scroll_check = 5,tweet_limit = 250):
 
 driver = invoke_chrome_instance()
 
-login_twitter("sandyma44414474","Tweet124$",driver)
+login_twitter(driver)
 
 
 advance_search(driver,mention='google',start_date = '2021-01-25',end_date ='2021-01-26')
