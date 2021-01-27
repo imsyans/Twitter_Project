@@ -2,18 +2,21 @@
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions
 import chromedriver_autoinstaller
 import pandas as pd
 from time import sleep 
 import datetime as dt
+import random
 
 # creating a chrome instance 
-def invoke_chrome_instance(headless = True):
+def invoke_chrome_instance():
     driver_path = chromedriver_autoinstaller.install()
     options = Options()
-    if headless is True:
-        options.headless = True
-        options.add_argument('--disable-gpu')
+    options.headless = False
+    options.add_argument('--disable-gpu')
     options.add_argument('log-level=3')
     driver = webdriver.Chrome(executable_path = driver_path,options = options)
     driver.set_page_load_timeout(100)
@@ -24,11 +27,13 @@ def invoke_chrome_instance(headless = True):
 # function to login to twitter
 def login_twitter(username,password,driver):
     try: 
-        sleep(3)
+        sleep(random.uniform(1,5))
         driver.get("https://twitter.com/login")
-        path_username = driver.find_element_by_xpath('//input[@name="session[username_or_email]"]')
+        xpath_username = '//input[@name="session[username_or_email]"]'
+        path_username = WebDriverWait(driver, 10).until(expected_conditions.presence_of_element_located((By.XPATH, xpath_username)))
         path_username.send_keys(username)
-        path_password = driver.find_element_by_xpath('//input[@name="session[password]"]')
+        xpath_password = '//input[@name="session[password]"]'
+        path_password = WebDriverWait(driver, 10).until(expected_conditions.presence_of_element_located((By.XPATH, xpath_password)))
         path_password.send_keys(password)
         
         path_password.send_keys(Keys.RETURN)
@@ -81,6 +86,7 @@ def advance_search(driver,lang=None,sent_from = None, sent_to =None, mention= No
     query_url = "https://twitter.com/search?q="  + sent_from + sent_to + mention + end_date + start_date + lang + '&src=typed_query&f=live'
      
     driver.get(query_url)
+    sleep(random.uniform(1, 10))
     return
 
 
@@ -143,29 +149,74 @@ def extract_data_from_webelement(card):
     tweet = [handle,postdate,tweet_tot_text,reply_count,retweet_count,like_count]
     
     return tweet
+
+# function for scroll
+
+def page_scroll(driver,max_scroll_try):
+    scroll_end = False
+    last_pos = driver.execute_script("return window.pageYOffset;")
+    driver.execute_script('window.scrollTo(0,document.body.scrollHeight);')
+    sleep(random.uniform(0, 15))
+    cur_pos = driver.execute_script("return window.pageYOffset;")
+    scroll_try = 0
+    while cur_pos == last_pos:
+        driver.execute_script('window.scrollTo(0,document.body.scrollHeight);')
+        scroll_try += 1 
+        cur_pos = driver.execute_script("return window.pageYOffset;")
+        if scroll_try > max_scroll_try:
+            scroll_end = True
+            break
+    return  scroll_end
+
+
+# Specify driver and output
+def main_func(driver,scroll_check = 5,tweet_limit = 250):
+    try:
+        scroll_end = False
+        page_count = 0
+        tweet_collector =pd.DataFrame([])
+        while  scroll_end == False:
+            tweet_cards =scrape_tweets_on_page(driver)
+            
+            for c in range(len(tweet_cards)):
+                tweet_list = extract_data_from_webelement(tweet_cards[c])    
+                if not tweet_list:
+                    continue
+                df= pd.DataFrame([tweet_list],columns=('Handle','DataTime','Tweet','Reply_Count','Retweet_Count','Like_Count'))
+                tweet_collector = tweet_collector.append(df)
+                tweet_collector.drop_duplicates(subset=None, keep='first', inplace=False)
+                
+
+            scroll_end = page_scroll(driver,scroll_check)
+            page_count += 1
+            print("Currently Scraping page",page_count,"tweet count:",len(tweet_collector))
+            if len(tweet_collector) > tweet_limit:
+                scroll_end = True
+    except:
+        return tweet_collector
+
+    return tweet_collector
     
 
-chrome_tab = invoke_chrome_instance()
 
-login_twitter("sandyma44414474","Tweet124$",chrome_tab)
+driver = invoke_chrome_instance()
 
-tweet_collector =pd.DataFrame([])
-
-advance_search(chrome_tab,mention='biden')
+login_twitter("sandyma44414474","Tweet124$",driver)
 
 
-tweet_cards =scrape_tweets_on_page(chrome_tab)
-
-for c in range(len(tweet_cards)):
-    tweet_list = extract_data_from_webelement(tweet_cards[c])
-    if not tweet_list:
-        continue
-    df= pd.DataFrame([tweet_list],columns=('Handle','DataTime','Tweet','Reply_Count','Retweet_Count','Like_Count'))
-    tweet_collector = tweet_collector.append(df)
- 
-tweet_collector =tweet_collector.drop_duplicates(subset=None, keep='first', inplace=False)
+advance_search(driver,mention='google',start_date = '2021-01-25',end_date ='2021-01-26')
+google =main_func(driver,scroll_check = 5,tweet_limit= 25)
+    
+    
 
 
-tweet_collector.index = pd.RangeIndex(len(tweet_cards))
 
-chrome_tab.close()
+    
+   
+    
+    
+    
+    
+
+    
+
