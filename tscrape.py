@@ -1,3 +1,17 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Feb 16 19:21:26 2021
+
+@author: sandeep
+"""
+
+# -*- coding: utf-8 -*-
+"""
+Spyder Editor
+
+This is a temporary script file.
+"""
 # Install chromedriver for selenium to work
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -8,7 +22,7 @@ from selenium.webdriver.support import expected_conditions
 import chromedriver_autoinstaller
 import pandas as pd
 from time import sleep 
-import datetime as dt
+from datetime import datetime
 import random
 import maskpass
 
@@ -46,7 +60,7 @@ def login_twitter(driver):
         return False
 
 # function to search
-def advance_search(driver,lang=None,sent_from = None, sent_to =None, mention= None,start_date= None, end_date = None):
+def advance_search(driver,lang=None,words = None, sent_from = None, sent_to =None, mention= None,start_date= None, end_date = None):
   
     
     # set language
@@ -54,6 +68,14 @@ def advance_search(driver,lang=None,sent_from = None, sent_to =None, mention= No
         lang = "lang%3A"+lang+"%20"
     else:
         lang =""
+        
+    # words 
+    
+    if words is not None:
+        words = words.split()
+        words = "(" + str('%20OR%20'.join(words)) + ")%20"
+    else:
+        words = ""
         
     # set from account
     if sent_from:
@@ -86,7 +108,7 @@ def advance_search(driver,lang=None,sent_from = None, sent_to =None, mention= No
          end_date = ""
          
     
-    query_url = "https://twitter.com/search?q="  + sent_from + sent_to + mention + end_date + start_date + lang + '&src=typed_query&f=live'
+    query_url = "https://twitter.com/search?q=" + words + sent_from + sent_to + mention + end_date + start_date + lang + '&src=typed_query&f=live'
      
     driver.get(query_url)
     sleep(random.uniform(1, 10))
@@ -206,20 +228,54 @@ driver = invoke_chrome_instance()
 
 login_twitter(driver)
 
+# Start of code to read data from keyword file
 
-advance_search(driver,mention='google',start_date = '2021-01-25',end_date ='2021-01-26')
-google =main_func(driver,scroll_check = 5,tweet_limit= 25)
-    
-    
+keywords_file = pd.read_csv('/Users/sandeep/Desktop/Keywords.csv')
+keywords_file['Ref_Date'] = pd.to_datetime(keywords_file['Ref_Date'])
+keywords_file['Before'] = pd.to_timedelta(keywords_file['Before'],unit='D')
+keywords_file['After'] = pd.to_timedelta(keywords_file['After'],unit = 'D')
+
+keywords_file['StartDate'] = keywords_file['Ref_Date'] - keywords_file['Before']
+keywords_file['EndDate'] = keywords_file['Ref_Date'] + keywords_file['After']
+
+keywords_file  = keywords_file.fillna('')
+
+
+# loop for keywords
+keyword_tweets = pd.DataFrame([])
+for key in keywords_file.index:
+    advance_search(driver,words=keywords_file.loc[key][0],start_date = datetime.strftime(keywords_file.loc[key][4], '%Y-%m-%d'),end_date =datetime.strftime(keywords_file.loc[key][5], '%Y-%m-%d'))
+    sleep(random.uniform(0, 15))
+    tweets_loop = main_func(driver,scroll_check = 5,tweet_limit= 25)
+    tweets_loop['KeyWord'] =keywords_file.loc[key][0]
+    keyword_tweets = keyword_tweets.append(tweets_loop)
 
 
 
     
-   
     
     
     
-    
+# start of code for handles
+handle_file = pd.read_csv('C:/Users/sandeep/Desktop/List of Companies_all.csv')
+handle_file['Handle'] = handle_file['Handle'].str.replace('@','')
+handle_file['Start'] = pd.to_datetime(handle_file['Start'])
+handle_file['End'] = pd.to_datetime(handle_file['End'])
+handle_file  = handle_file.fillna('')
 
-    
 
+
+# loop for handles
+
+handle_tweets = pd.DataFrame([])
+for key in handle_file.index:
+    advance_search(driver,sent_from=handle_file.loc[key][0],words = handle_file.loc[key][1] , start_date = datetime.strftime(handle_file.loc[key][2], '%Y-%m-%d'),end_date =datetime.strftime(handle_file.loc[key][3], '%Y-%m-%d'))
+    sleep(random.uniform(0, 15))
+    tweets_loop = main_func(driver,scroll_check = 5,tweet_limit= 500)
+    tweets_loop['Handle'] =handle_file.loc[key][0]
+    handle_tweets = handle_tweets.append(tweets_loop)
+    
+    
+    
+    
+    
